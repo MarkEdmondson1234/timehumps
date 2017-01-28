@@ -51,14 +51,16 @@ timehump_heatmap <- function(the_data,
   gg <- gg + geom_bin2d(bins = bins)
   gg <- gg + ggtitle(the_data$fullURL[[1]])
   gg <- gg + guides(fill = guide_legend(title = "Session \ncount"))
-  gg <- gg + xlab("Session time") + ylab("Source / Medium")
-  gg + scale_fill_gradientn(colours = c("#bdc9e1","#ffffbf", "#ca0020"))
+  gg <- gg + xlab("Date of session") + ylab("Source / Medium")
+  gg <- gg + scale_fill_gradientn(colours = c("#bdc9e1","#ffffbf", "#ca0020"))
+  
+  gg
 }
 
 focus_data <- example_data[example_data$timestamp < as.POSIXct(as.Date("2017-01-19")),]
 focus_data <- focus_data[focus_data$sourceMedium %in% unique(focus_data$sourceMedium)[1:6],]
                            
-timehump_heatmap(focus_data, 500)
+timehump_heatmap(focus_data, 50)
 
 ## make all the plots
 lapply(ref_list, timehump_heatmap)
