@@ -5,7 +5,7 @@ ga_auth(no_auto = TRUE)
 
 al <- google_analytics_account_list()
 gaid <- 81416156
-start <- "2016-12-01"
+start <- "2016-01-01"
 end <- "2017-01-26"
 
 gadata <- google_analytics_4(gaid,
@@ -15,7 +15,8 @@ gadata <- google_analytics_4(gaid,
                              max = -1)
 
 gadata$fullURL <- paste0(gadata$hostname, gadata$landingPagePath)
-gadata$timestamp <- as.POSIXct(as.numeric(gadata$nthMinute)*60, origin = as.POSIXct(as.Date(start)))
+gadata$timestamp <- as.POSIXct(as.numeric(gadata$nthMinute)*60, 
+                               origin = as.POSIXct(as.Date(start)))
 
 # 124 URLs
 the_urls <- unique(gadata$fullURL)
@@ -25,8 +26,18 @@ work_data <- gadata[,c("timestamp","sourceMedium","fullURL")]
 
 ## list per URL of sources/min
 ref_list <- split(work_data, work_data$fullURL)
+ref_list <- setNames(ref_list, 
+                     vapply(ref_list, 
+                            function(x) x[["fullURL"]][[1]], 
+                            character(1), 
+                            USE.NAMES = FALSE))
 
-timehump_heatmap <- function(the_data){
+example_data <- ref_list[["code.markedmondson.me/real-time-GTM-google-cloud-r-shiny-1/"]]
+example_data$bins <- as.numeric(cut(as.numeric(example_data$timestamp), breaks = 30))
+
+
+timehump_heatmap <- function(the_data,
+                             bins = 30){
   
   if(nrow(the_data) < 5){
     return(NULL)
@@ -37,14 +48,29 @@ timehump_heatmap <- function(the_data){
   
   # make plot
   gg <- ggplot(the_data, aes(x = timestamp, y = name)) + theme_minimal()
-  gg <- gg + geom_bin2d()
+  gg <- gg + geom_bin2d(bins = bins)
   gg <- gg + ggtitle(the_data$fullURL[[1]])
   gg <- gg + guides(fill = guide_legend(title = "Session \ncount"))
   gg <- gg + xlab("Session time") + ylab("Source / Medium")
-  gg + scale_fill_gradientn(colours = c("#bdc9e1","#74a9cf","#2b8cbe", "#045a8d"))
+  gg + scale_fill_gradientn(colours = c("#bdc9e1","#ffffbf", "#ca0020"))
 }
 
-timehump_heatmap(ref_list[[1]])
+focus_data <- example_data[example_data$timestamp < as.POSIXct(as.Date("2017-01-19")),]
+focus_data <- focus_data[focus_data$sourceMedium %in% unique(focus_data$sourceMedium)[1:6],]
+                           
+timehump_heatmap(focus_data, 500)
 
 ## make all the plots
 lapply(ref_list, timehump_heatmap)
+
+
+## if want to avoid ggplot doing the binning for you:
+library(dplyr)
+
+example_data$name <- example_data$sourceMedium
+example_plot <- example_data %>% 
+  select(bins, name) %>% group_by(bins, name) %>% 
+  summarise(value = n())
+
+ggplot(example_plot, aes(x = bins, y = name, fill = value)) + geom_tile()
+
